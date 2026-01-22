@@ -9,6 +9,11 @@ The backend is built with **Java EE and WildFly**, while the frontend is develop
 ---
 
 ## 🎥 Demo Video
+<p align="center">
+  <a href="https://drive.google.com/file/d/1ZwVsnA0uiTOP3VdE9H1cWQ_Xcb6We7fX/view" target="_blank">
+    ▶️ Watch Demo Video (3 min)
+  </a>
+</p>
 [Demo](https://drive.google.com/file/d/1ZwVsnA0uiTOP3VdE9H1cWQ_Xcb6We7fX/view?usp=sharing)
 
 ---
