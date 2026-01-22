@@ -1,0 +1,1064 @@
+openapi: 3.0.3
+info:
+  title: Test Management API
+  description: |
+    A comprehensive test management system for creating, managing, and administering tests.
+    
+    ## Features
+    - Enterprise and domain management
+    - Test creation and management
+    - Question management (QCM, True/False, Open questions)
+    - Candidate invitation system
+    - Test session management
+    - AI-powered scoring with Groq
+    - Detailed test results and analytics
+    
+    ## Authentication
+    Most endpoints require authentication via cookie-based JWT tokens.
+    - Admin endpoints: Require admin authentication
+    - Candidate endpoints: Require candidate authentication
+
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@testmanagement.com
+
+servers:
+  - url: http://localhost:8080/api-rest-1.0-SNAPSHOT
+    description: Local development server
+  - url: https://api.testmanagement.com/api-rest-1.0-SNAPSHOT
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: Login, logout, and authentication endpoints
+  - name: Enterprise
+    description: Enterprise and domain management
+  - name: Test Management
+    description: Test creation and configuration
+  - name: Question Management
+    description: Question creation and retrieval
+  - name: Candidate
+    description: Candidate test-taking endpoints
+  - name: Scoring
+    description: AI-powered scoring with Groq
+
+security:
+  - cookieAuth: []
+
+paths:
+  # ============================================================
+  # AUTHENTICATION ENDPOINTS
+  # ============================================================
+
+  /auth:
+    post:
+      tags:
+        - Authentication
+      summary: Admin login
+      description: Authenticate as an admin user and receive a JWT token in a cookie
+      operationId: adminLogin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              username: "admin@company.com"
+              password: "SecurePass123!"
+      responses:
+        '200':
+          description: Login successful, cookie set
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: test_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; Path=/; Max-Age=86400
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/candidate:
+    post:
+      tags:
+        - Authentication
+      summary: Candidate login
+      description: Authenticate as a candidate using email and access code
+      operationId: candidateLogin
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CandidateAuthRequest'
+            example:
+              email: "candidate@email.com"
+              accessCode: "ABC123"
+      responses:
+        '200':
+          description: Login successful with test information
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CandidateAuthResponse'
+        '401':
+          description: Invalid credentials or expired access code
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout
+      description: Delete authentication cookie and logout
+      operationId: logout
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Logged out successfully"
+
+  /auth/test/{testId}/questions:
+    get:
+      tags:
+        - Authentication
+      summary: Get test questions (candidate view)
+      description: Get all questions for a test without showing correct answers
+      operationId: getTestQuestionsForCandidate
+      security: []
+      parameters:
+        - name: testId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Test ID
+      responses:
+        '200':
+          description: List of questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CandidateQuestionResponse'
+
+  # ============================================================
+  # ENTERPRISE ENDPOINTS
+  # ============================================================
+
+  /enterprises:
+    post:
+      tags:
+        - Enterprise
+      summary: Create enterprise
+      description: Create a new enterprise with admin account
+      operationId: createEnterprise
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnterpriseCreateRequest'
+      responses:
+        '201':
+          description: Enterprise created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Invalid request
+
+    get:
+      tags:
+        - Enterprise
+      summary: Get enterprise information
+      description: Get details of the authenticated enterprise
+      operationId: getEnterprise
+      responses:
+        '200':
+          description: Enterprise details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Enterprise'
+
+  /enterprises/domain:
+    post:
+      tags:
+        - Enterprise
+      summary: Create domain
+      description: Create a new domain category
+      operationId: createDomain
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Domain'
+      responses:
+        '201':
+          description: Domain created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Domain'
+
+  /enterprises/domains:
+    post:
+      tags:
+        - Enterprise
+      summary: Create multiple domains
+      description: Create multiple domain categories at once
+      operationId: createMultipleDomains
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/Domain'
+      responses:
+        '201':
+          description: Domains created
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Domain'
+
+    get:
+      tags:
+        - Enterprise
+      summary: Get all domains
+      description: Retrieve all available domains
+      operationId: getAllDomains
+      security: []
+      responses:
+        '200':
+          description: List of domains
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Domain'
+
+  # ============================================================
+  # TEST MANAGEMENT ENDPOINTS
+  # ============================================================
+
+  /test:
+    post:
+      tags:
+        - Test Management
+      summary: Create test
+      description: Create a new test with questions
+      operationId: createTest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestRequest'
+      responses:
+        '201':
+          description: Test created successfully
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "Test created successfully with id 1"
+
+    get:
+      tags:
+        - Test Management
+      summary: Get all tests
+      description: Get all tests for the authenticated enterprise
+      operationId: getAllTests
+      responses:
+        '200':
+          description: List of tests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TestResponse'
+
+  /test/{testId}/questions:
+    get:
+      tags:
+        - Test Management
+      summary: Get questions by test ID
+      description: Get all questions in a specific test (admin view with correct answers)
+      operationId: getQuestionsByTestId
+      parameters:
+        - name: testId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Test ID
+      responses:
+        '200':
+          description: List of questions with answers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TestQuestionResponse'
+
+  /test/{testId}/sessions:
+    get:
+      tags:
+        - Test Management
+      summary: Get test sessions
+      description: Get all test sessions for a specific test with candidate details
+      operationId: getTestSessions
+      parameters:
+        - name: testId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Test ID
+      responses:
+        '200':
+          description: List of test sessions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TestSessionResponse'
+
+  /test/invitation:
+    post:
+      tags:
+        - Test Management
+      summary: Send test invitations
+      description: Invite candidates to take a test via email
+      operationId: sendInvitations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestSessionRequest'
+      responses:
+        '201':
+          description: Invitations sent successfully
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "Test invitation sent successfully"
+
+  # ============================================================
+  # QUESTION MANAGEMENT ENDPOINTS
+  # ============================================================
+
+  /test/questions:
+    post:
+      tags:
+        - Question Management
+      summary: Create question
+      description: Create a new question (QCM, True/False, or Open)
+      operationId: createQuestion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuestionCreateRequest'
+            examples:
+              qcm:
+                summary: Multiple Choice Question
+                value:
+                  label: "What is polymorphism?"
+                  hint: "Think about OOP"
+                  points: 10.0
+                  questionType: "QCM"
+                  answers:
+                    - label: "Ability to take many forms"
+                      correct: true
+                    - label: "A loop"
+                      correct: false
+              truefalse:
+                summary: True/False Question
+                value:
+                  label: "Java is platform-independent"
+                  hint: "Think about JVM"
+                  points: 5.0
+                  questionType: "TRUE_OR_FALSE"
+                  answers:
+                    - label: "True"
+                      correct: true
+                    - label: "False"
+                      correct: false
+              open:
+                summary: Open Question
+                value:
+                  label: "Explain the JVM"
+                  hint: "Think about execution"
+                  points: 10.0
+                  questionType: "OPEN_QUESTION"
+                  openAnswers:
+                    expectedAnswer: "The JVM is a runtime environment..."
+                    keyWords:
+                      - keyword: "bytecode"
+                      - keyword: "platform independence"
+      responses:
+        '201':
+          description: Question created successfully
+          content:
+            application/json:
+              schema:
+                type: string
+
+    get:
+      tags:
+        - Question Management
+      summary: Get all questions
+      description: Get all questions for the authenticated enterprise
+      operationId: getAllQuestions
+      responses:
+        '200':
+          description: List of questions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/QuestionResponse'
+
+  # ============================================================
+  # CANDIDATE ENDPOINTS
+  # ============================================================
+
+  /candidate/submit-test:
+    post:
+      tags:
+        - Candidate
+      summary: Submit test answers
+      description: Submit answers for a test. Multiple choice answers are auto-scored, open questions use AI scoring.
+      operationId: submitTest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitTestRequest'
+            example:
+              answers:
+                - questionId: 1
+                  selectedAnswerId: 3
+                  openAnswerText: null
+                - questionId: 2
+                  selectedAnswerId: null
+                  openAnswerText: "The JVM is a runtime environment..."
+      responses:
+        '200':
+          description: Test submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitTestResponse'
+        '400':
+          description: Bad request or test already submitted
+
+  /candidate/results:
+    get:
+      tags:
+        - Candidate
+      summary: Get test results
+      description: Get detailed test results with question-by-question breakdown
+      operationId: getTestResults
+      responses:
+        '200':
+          description: Test results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SubmitTestResponse'
+        '400':
+          description: Test not completed yet
+
+  # ============================================================
+  # SCORING ENDPOINTS
+  # ============================================================
+
+  /scoring/open-question:
+    post:
+      tags:
+        - Scoring
+      summary: Score open question
+      description: Score an open-ended question using Groq AI
+      operationId: scoreOpenQuestion
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OpenQuestionScoreRequest'
+      responses:
+        '200':
+          description: Question scored successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OpenQuestionScoreResponse'
+        '500':
+          description: Scoring error
+
+  /scoring/health:
+    get:
+      tags:
+        - Scoring
+      summary: Scoring service health check
+      description: Check if Groq API is configured and ready
+      operationId: scoringHealthCheck
+      security: []
+      responses:
+        '200':
+          description: Health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ready, not configured]
+                  groqApiKey:
+                    type: string
+                    enum: [set, not set]
+
+# ============================================================
+# COMPONENTS / SCHEMAS
+# ============================================================
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: test_token
+      description: JWT token stored in cookie
+
+  schemas:
+    # ==================== Authentication Schemas ====================
+
+    LoginRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: "admin@company.com"
+        password:
+          type: string
+          format: password
+          example: "SecurePass123!"
+
+    CandidateAuthRequest:
+      type: object
+      required:
+        - email
+        - accessCode
+      properties:
+        email:
+          type: string
+          format: email
+          example: "candidate@email.com"
+        accessCode:
+          type: string
+          example: "ABC123"
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        enterpriseId:
+          type: string
+          format: uuid
+
+    CandidateAuthResponse:
+      type: object
+      properties:
+        testSessionId:
+          type: integer
+          format: int64
+        testId:
+          type: integer
+        testName:
+          type: string
+        durationMinutes:
+          type: integer
+
+    # ==================== Enterprise Schemas ====================
+
+    Enterprise:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        domain:
+          $ref: '#/components/schemas/Domain'
+
+    EnterpriseCreateRequest:
+      type: object
+      required:
+        - name
+        - domain
+        - adminAccount
+      properties:
+        name:
+          type: string
+          example: "Tech Corp"
+        domain:
+          $ref: '#/components/schemas/Domain'
+        adminAccount:
+          type: object
+          properties:
+            username:
+              type: string
+            password:
+              type: string
+
+    Domain:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          example: "Technology"
+
+    # ==================== Test Schemas ====================
+
+    TestRequest:
+      type: object
+      required:
+        - name
+        - duration_minute
+      properties:
+        name:
+          type: string
+          example: "Java Programming Fundamentals"
+        duration_minute:
+          type: integer
+          example: 60
+        questions:
+          type: array
+          items:
+            type: object
+            properties:
+              questionId:
+                type: integer
+              position:
+                type: integer
+
+    TestResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        durationMinute:
+          type: integer
+        isActive:
+          type: boolean
+        isPublic:
+          type: boolean
+        enterpriseId:
+          type: string
+          format: uuid
+        adminAccountId:
+          type: integer
+          format: int64
+
+    TestSessionRequest:
+      type: object
+      required:
+        - testId
+        - emailCandidate
+        - dateExpiration
+      properties:
+        testId:
+          type: integer
+          example: 1
+        emailCandidate:
+          type: array
+          items:
+            type: string
+            format: email
+          example: ["candidate1@email.com", "candidate2@email.com"]
+        dateExpiration:
+          type: string
+          format: date-time
+          example: "2026-02-01T23:59:59"
+
+    TestSessionResponse:
+      type: object
+      properties:
+        sessionId:
+          type: integer
+          format: int64
+        candidateEmail:
+          type: string
+          format: email
+        accessCode:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        expirationTime:
+          type: string
+          format: date-time
+        isUsed:
+          type: boolean
+        status:
+          type: string
+          enum: [PLANNED, SCHEDULED, ACTIVE, FINISHED]
+        score:
+          type: number
+          format: double
+        testName:
+          type: string
+        testId:
+          type: integer
+        testDuration:
+          type: integer
+
+    # ==================== Question Schemas ====================
+
+    QuestionCreateRequest:
+      type: object
+      required:
+        - label
+        - points
+        - questionType
+      properties:
+        label:
+          type: string
+          example: "What is polymorphism?"
+        hint:
+          type: string
+          example: "Think about OOP"
+        points:
+          type: number
+          format: double
+          example: 10.0
+        questionType:
+          type: string
+          enum: [QCM, TRUE_OR_FALSE, OPEN_QUESTION]
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnswerCreateRequest'
+        openAnswers:
+          $ref: '#/components/schemas/OpenAnswerCreateRequest'
+
+    AnswerCreateRequest:
+      type: object
+      required:
+        - label
+        - correct
+      properties:
+        label:
+          type: string
+          example: "Ability to take many forms"
+        correct:
+          type: boolean
+          example: true
+
+    OpenAnswerCreateRequest:
+      type: object
+      properties:
+        expectedAnswer:
+          type: string
+        keyWords:
+          type: array
+          items:
+            type: object
+            properties:
+              keyword:
+                type: string
+
+    QuestionResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        label:
+          type: string
+        hint:
+          type: string
+        types:
+          type: string
+          example: "qcm"
+        points:
+          type: number
+          format: double
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnswerResponse'
+        openAnswers:
+          $ref: '#/components/schemas/OpenAnswerResponse'
+
+    TestQuestionResponse:
+      type: object
+      properties:
+        position:
+          type: integer
+        id:
+          type: integer
+        label:
+          type: string
+        hint:
+          type: string
+        types:
+          type: string
+        points:
+          type: number
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnswerResponse'
+
+    CandidateQuestionResponse:
+      type: object
+      description: Question response for candidates (no correct answers shown)
+      properties:
+        id:
+          type: integer
+        label:
+          type: string
+        hint:
+          type: string
+        questionType:
+          type: string
+        points:
+          type: number
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/CandidateAnswerResponse'
+
+    AnswerResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        label:
+          type: string
+        correct:
+          type: boolean
+
+    CandidateAnswerResponse:
+      type: object
+      description: Answer response for candidates (no correct flag)
+      properties:
+        id:
+          type: integer
+        label:
+          type: string
+
+    OpenAnswerResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        expectedAnswer:
+          type: string
+        keyWords:
+          type: array
+          items:
+            $ref: '#/components/schemas/KeywordResponse'
+
+    KeywordResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        keyword:
+          type: string
+
+    # ==================== Candidate Test Submission ====================
+
+    SubmitTestRequest:
+      type: object
+      required:
+        - answers
+      properties:
+        answers:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubmitAnswerRequest'
+
+    SubmitAnswerRequest:
+      type: object
+      required:
+        - questionId
+      properties:
+        questionId:
+          type: integer
+          example: 1
+        selectedAnswerId:
+          type: integer
+          nullable: true
+          description: For multiple choice/true-false questions
+          example: 3
+        openAnswerText:
+          type: string
+          nullable: true
+          description: For open-ended questions
+          example: "The JVM is a runtime environment that executes Java bytecode..."
+
+    SubmitTestResponse:
+      type: object
+      properties:
+        testSessionId:
+          type: integer
+          format: int64
+        totalScore:
+          type: number
+          format: double
+          example: 85.5
+        totalPossiblePoints:
+          type: number
+          format: double
+          example: 100.0
+        totalScoreFraction:
+          type: string
+          example: "85.5/100.0"
+        scorePercentage:
+          type: number
+          format: double
+          example: 85.5
+        totalQuestions:
+          type: integer
+          example: 10
+        answeredQuestions:
+          type: integer
+          example: 10
+        status:
+          type: string
+          enum: [PLANNED, ACTIVE, FINISHED]
+        message:
+          type: string
+          example: "Test submitted successfully"
+        questionResults:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuestionResultResponse'
+
+    QuestionResultResponse:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        questionLabel:
+          type: string
+        questionType:
+          type: string
+        candidateAnswer:
+          type: string
+        correctAnswer:
+          type: string
+        isCorrect:
+          type: boolean
+          nullable: true
+        scoreFraction:
+          type: string
+          example: "8.0/10.0"
+        pointsEarned:
+          type: number
+          format: double
+        maxPoints:
+          type: number
+          format: double
+
+    # ==================== Scoring Schemas ====================
+
+    OpenQuestionScoreRequest:
+      type: object
+      required:
+        - questionId
+        - studentAnswer
+        - modelAnswer
+        - maxPoints
+      properties:
+        questionId:
+          type: integer
+          example: 1
+        studentAnswer:
+          type: string
+          example: "The JVM is like a translator..."
+        modelAnswer:
+          type: string
+          example: "The Java Virtual Machine (JVM) is a runtime environment..."
+        maxPoints:
+          type: integer
+          example: 10
+
+    OpenQuestionScoreResponse:
+      type: object
+      properties:
+        questionId:
+          type: integer
+        score:
+          type: integer
+          example: 8
+        feedback:
+          type: string
+          example: "Good explanation, covers key concepts"
+        maxPoints:
+          type: integer
+
+    # ==================== Error Schema ====================
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+

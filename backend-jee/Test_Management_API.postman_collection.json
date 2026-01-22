@@ -1,0 +1,705 @@
+{
+  "info": {
+    "name": "Test Management API - Complete Collection",
+    "description": "Comprehensive Postman collection for testing all endpoints in the Test Management System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api-rest-1.0-SNAPSHOT",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "candidateToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "questionId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "enterpriseId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "testSessionId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Cookie is set automatically by the server"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth"]
+            },
+            "description": "Login as admin user. Sets test_token cookie."
+          },
+          "response": []
+        },
+        {
+          "name": "Candidate Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Cookie is set automatically by the server",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.testSessionId) {",
+                  "    pm.collectionVariables.set('testSessionId', jsonData.testSessionId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"candidate@email.com\",\n  \"accessCode\": \"ABC123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/candidate",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "candidate"]
+            },
+            "description": "Login as candidate with access code. Returns test info and sets cookie."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Logout and delete authentication cookie."
+          },
+          "response": []
+        }
+      ],
+      "description": "Authentication endpoints for admin and candidate login/logout"
+    },
+    {
+      "name": "2. Enterprise Management",
+      "item": [
+        {
+          "name": "Create Enterprise",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData && jsonData.enterpriseId) {",
+                  "    pm.collectionVariables.set('enterpriseId', jsonData.enterpriseId);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tech Corp\",\n  \"domain\": {\n    \"name\": \"Technology\"\n  },\n  \"adminAccount\": {\n    \"username\": \"admin@techcorp.com\",\n    \"password\": \"SecurePass123!\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/enterprises",
+              "host": ["{{baseUrl}}"],
+              "path": ["enterprises"]
+            },
+            "description": "Create a new enterprise with admin account."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Enterprise Info",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/enterprises",
+              "host": ["{{baseUrl}}"],
+              "path": ["enterprises"]
+            },
+            "description": "Get enterprise information (requires authentication cookie)."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Domain",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"IT Services\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/enterprises/domain",
+              "host": ["{{baseUrl}}"],
+              "path": ["enterprises", "domain"]
+            },
+            "description": "Create a new domain category."
+          },
+          "response": []
+        }
+      ],
+      "description": "Enterprise and domain management endpoints"
+    },
+    {
+      "name": "3. Test Management",
+      "item": [
+        {
+          "name": "Create Test",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Extract test ID from response if present"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Java Programming Fundamentals\",\n  \"durationMinute\": 60,\n  \"isActive\": true,\n  \"isPublic\": false,\n  \"questions\": [\n    {\n      \"questionId\": 1,\n      \"position\": 1\n    },\n    {\n      \"questionId\": 2,\n      \"position\": 2\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["test"]
+            },
+            "description": "Create a new test (requires admin authentication)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Tests by Enterprise",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/test",
+              "host": ["{{baseUrl}}"],
+              "path": ["test"]
+            },
+            "description": "Get all tests for the authenticated enterprise."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Questions by Test ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/test/{{testId}}/questions",
+              "host": ["{{baseUrl}}"],
+              "path": ["test", "{{testId}}", "questions"]
+            },
+            "description": "Get all questions in a specific test (admin view with correct answers)."
+          },
+          "response": []
+        },
+        {
+          "name": "Send Test Invitation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"testId\": {{testId}},\n  \"candidates\": [\n    {\n      \"email\": \"candidate1@email.com\",\n      \"expirationDate\": \"2026-02-01T23:59:59\"\n    },\n    {\n      \"email\": \"candidate2@email.com\",\n      \"expirationDate\": \"2026-02-01T23:59:59\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/test/invitation",
+              "host": ["{{baseUrl}}"],
+              "path": ["test", "invitation"]
+            },
+            "description": "Send test invitations to candidates via email."
+          },
+          "response": []
+        }
+      ],
+      "description": "Test creation and management endpoints"
+    },
+    {
+      "name": "4. Question Management",
+      "item": [
+        {
+          "name": "Create Question - QCM",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"What is polymorphism in Java?\",\n  \"hint\": \"Think about object-oriented programming\",\n  \"points\": 10.0,\n  \"questionType\": \"QCM\",\n  \"answers\": [\n    {\n      \"label\": \"Ability of objects to take many forms\",\n      \"isCorrect\": true\n    },\n    {\n      \"label\": \"A type of loop\",\n      \"isCorrect\": false\n    },\n    {\n      \"label\": \"A database query\",\n      \"isCorrect\": false\n    },\n    {\n      \"label\": \"A sorting algorithm\",\n      \"isCorrect\": false\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/test/questions",
+              "host": ["{{baseUrl}}"],
+              "path": ["test", "questions"]
+            },
+            "description": "Create a multiple choice question (QCM)."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Question - True or False",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Java is a platform-independent language\",\n  \"hint\": \"Think about the role of the JVM\",\n  \"points\": 5.0,\n  \"questionType\": \"TRUE_OR_FALSE\",\n  \"answers\": [\n    {\n      \"label\": \"True\",\n      \"isCorrect\": true\n    },\n    {\n      \"label\": \"False\",\n      \"isCorrect\": false\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/test/questions",
+              "host": ["{{baseUrl}}"],
+              "path": ["test", "questions"]
+            },
+            "description": "Create a true/false question."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Question - Open Question",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Explain what the JVM is and its role in Java\",\n  \"hint\": \"Think about execution and portability\",\n  \"points\": 10.0,\n  \"questionType\": \"OPEN_QUESTION\",\n  \"openAnswers\": {\n    \"expectedAnswer\": \"The Java Virtual Machine (JVM) is a runtime environment that executes Java bytecode. It acts as an abstraction layer between compiled Java code and the underlying operating system, enabling platform independence.\",\n    \"keyWords\": [\n      {\n        \"keyword\": \"bytecode\"\n      },\n      {\n        \"keyword\": \"platform independence\"\n      },\n      {\n        \"keyword\": \"runtime environment\"\n      }\n    ]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/test/questions",
+              "host": ["{{baseUrl}}"],
+              "path": ["test", "questions"]
+            },
+            "description": "Create an open-ended question with expected answer and keywords."
+          },
+          "response": []
+        },
+        {
+          "name": "Get All Questions by Enterprise",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/test/questions",
+              "host": ["{{baseUrl}}"],
+              "path": ["test", "questions"]
+            },
+            "description": "Get all questions created by the enterprise."
+          },
+          "response": []
+        }
+      ],
+      "description": "Question creation and management (all three types: QCM, True/False, Open)"
+    },
+    {
+      "name": "5. Candidate - Test Taking",
+      "item": [
+        {
+          "name": "Get Test Questions (Candidate View)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/test/{{testId}}/questions",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "test", "{{testId}}", "questions"]
+            },
+            "description": "Get all questions for a test (candidate view - no correct answers shown)."
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Test Answers",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answers\": [\n    {\n      \"questionId\": 52,\n      \"selectedAnswerId\": 2,\n      \"openAnswerText\": null\n    },\n    {\n      \"questionId\": 2,\n      \"selectedAnswerId\": null,\n      \"openAnswerText\": \"The JVM (Java Virtual Machine) is a runtime environment that executes Java bytecode, enabling platform independence by acting as an abstraction layer between compiled code and the operating system.\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/candidate/submit-test",
+              "host": ["{{baseUrl}}"],
+              "path": ["candidate", "submit-test"]
+            },
+            "description": "Submit test answers. Auto-scores multiple choice and uses AI for open questions."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Test Results",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/candidate/results",
+              "host": ["{{baseUrl}}"],
+              "path": ["candidate", "results"]
+            },
+            "description": "Get detailed test results with question-by-question breakdown."
+          },
+          "response": []
+        }
+      ],
+      "description": "Candidate endpoints for taking tests and viewing results"
+    },
+    {
+      "name": "6. AI Scoring",
+      "item": [
+        {
+          "name": "Score Open Question (Manual)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questionId\": 2,\n  \"studentAnswer\": \"The JVM is like a translator that runs Java programs on any computer.\",\n  \"modelAnswer\": \"The Java Virtual Machine (JVM) is a runtime environment that executes Java bytecode. It acts as an abstraction layer between compiled Java code and the underlying operating system, enabling platform independence.\",\n  \"maxPoints\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/scoring/open-question",
+              "host": ["{{baseUrl}}"],
+              "path": ["scoring", "open-question"]
+            },
+            "description": "Manually score an open question using Groq AI."
+          },
+          "response": []
+        },
+        {
+          "name": "Scoring Service Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/scoring/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["scoring", "health"]
+            },
+            "description": "Check if Groq API is configured and ready."
+          },
+          "response": []
+        }
+      ],
+      "description": "AI-powered scoring endpoints using Groq"
+    },
+    {
+      "name": "7. Example Workflows",
+      "item": [
+        {
+          "name": "Complete Admin Flow",
+          "item": [
+            {
+              "name": "1. Admin Login",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"password123\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["auth"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "2. Create Questions",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"label\": \"Sample Question\",\n  \"points\": 5.0,\n  \"questionType\": \"QCM\",\n  \"answers\": [\n    {\"label\": \"Option A\", \"isCorrect\": true},\n    {\"label\": \"Option B\", \"isCorrect\": false}\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/test/questions",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["test", "questions"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "3. Create Test",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Sample Test\",\n  \"durationMinute\": 30,\n  \"isActive\": true,\n  \"questions\": [{\"questionId\": 1, \"position\": 1}]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/test",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["test"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "4. Send Invitations",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"testId\": 1,\n  \"candidates\": [\n    {\"email\": \"candidate@test.com\", \"expirationDate\": \"2026-02-01T23:59:59\"}\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/test/invitation",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["test", "invitation"]
+                }
+              },
+              "response": []
+            }
+          ]
+        },
+        {
+          "name": "Complete Candidate Flow",
+          "item": [
+            {
+              "name": "1. Candidate Login",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"candidate@test.com\",\n  \"accessCode\": \"ABC123\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/auth/candidate",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["auth", "candidate"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "2. View Questions",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/auth/test/1/questions",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["auth", "test", "1", "questions"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "3. Submit Test",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"answers\": [\n    {\"questionId\": 1, \"selectedAnswerId\": 2}\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/candidate/submit-test",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["candidate", "submit-test"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "4. View Results",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/candidate/results",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["candidate", "results"]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ],
+      "description": "Complete workflow examples for admin and candidate"
+    }
+  ],
+  "auth": {
+    "type": "noauth"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ]
+}
+
