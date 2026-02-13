@@ -8,13 +8,19 @@ The backend is built with **Java EE and WildFly**, while the frontend is develop
 
 ---
 
-## 🎥 Demo Video
+## 🎥 Demo Videos
+
 <p align="center">
-  <a href="https://drive.google.com/file/d/1ZwVsnA0uiTOP3VdE9H1cWQ_Xcb6We7fX/view" target="_blank">
-    ▶️ Demo Video (5 min)
+  <a href="https://drive.google.com/file/d/1MBC6hHplFshRoh3GqERYKo0ARI8lBo3Q/view?usp=sharing" target="_blank">
+    ▶️ Demo Video (English – 5 min)
   </a>
 </p>
 
+<p align="center">
+  <a href="https://drive.google.com/file/d/1ZwVsnA0uiTOP3VdE9H1cWQ_Xcb6We7fX/view" target="_blank">
+    ▶️ Demo Video (Français – 5 min)
+  </a>
+</p>
 ---
 
 ## 🔄 Main Workflow
